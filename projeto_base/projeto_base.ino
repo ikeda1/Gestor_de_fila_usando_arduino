@@ -8,8 +8,8 @@ int cont_senha_pref = 501; // Contador de senhas preferenciais, mostra o número
 int cont = 0;
 int i;
 
-const int num_mista = 10;
-const unsigned int num_senha = 10; // Número de senhas dentro do vetor
+const int num_mista = 50;
+const unsigned int num_senha = 50; // Número de senhas dentro do vetor
 int lista_senhas[num_senha];       // Vetor que armazena senhas existentes
 int lista_senhas_pref[num_senha];  // Vetor que armazena senhas PREFERENCIAIS
 int lista_mista[num_mista];        // Vetor que armazena todas as senhas na ordem de chegada
@@ -18,11 +18,7 @@ int ordem_senha = 0;      // Variável que indica as posições em que as senhas
 int ordem_senha_pref = 0; // Variável que indica as posições em que as senhas PREFERENCIAIS serão armazenadas no vetor "lista_senhas_pref"
 int ordem_mista = 0;      // Variável que indica as posições em que todas as senhas serão armazenadas no vetor "lista_mista"
 
-bool tem_preferencial = false; // Marca se tem ou não preferencial
-bool ainda_tem_pref = false;   // Marca se ainda tem preferencial
-
-bool pref = false;
-bool normal = false;
+bool alterna_pref = false; // Variável que registra a alternancia entre senhas normais e preferenciais
 
 int soma_preferencial;
 int soma_normal;
@@ -86,7 +82,6 @@ void loop()
     cont_senha_pref++;
     ordem_senha_pref++;
     ordem_mista++;
-    tem_preferencial = true;
 
     delay(500);
   }
@@ -98,55 +93,62 @@ void loop()
     delay(500);
   }
 
-  if (digitalRead(botao4) == HIGH)
-  {
-    Serial.println();
-    Serial.println("Senhas Normais");
-    for (byte i = 0; i < num_senha; i++)
-    {
-      Serial.print(lista_senhas[i]);
-      Serial.print(" | ");
-    }
+  // if (digitalRead(botao4) == HIGH)
+  // {
+  //   Serial.println();
+  //   Serial.println("Senhas Normais");
+  //   for (byte i = 0; i < num_senha; i++)
+  //   {
+  //     Serial.print(lista_senhas[i]);
+  //     Serial.print(" | ");
+  //   }
 
-    Serial.println();
-    Serial.println("Senhas Preferenciais");
-    for (byte i = 0; i < num_senha; i++)
-    {
-      Serial.print(lista_senhas_pref[i]);
-      Serial.print(" | ");
-    }
+  //   Serial.println();
+  //   Serial.println("Senhas Preferenciais");
+  //   for (byte i = 0; i < num_senha; i++)
+  //   {
+  //     Serial.print(lista_senhas_pref[i]);
+  //     Serial.print(" | ");
+  //   }
 
-    Serial.println();
-    Serial.println("Senha Mista");
-    for (byte i = 0; i < num_mista; i++)
-    {
-      Serial.print(lista_mista[i]);
-      Serial.print(" | ");
-    }
-    confere_ordem();
-    Serial.println("cont = " + String(cont));
+  //   Serial.println();
+  //   Serial.println("Senha Mista");
+  //   for (byte i = 0; i < num_mista; i++)
+  //   {
+  //     Serial.print(lista_mista[i]);
+  //     Serial.print(" | ");
+  //   }
+  //   confere_ordem();
+  //   Serial.println("cont = " + String(cont));
 
-    delay(500);
-  }
+  //   delay(500);
+  // }
+
+ if (digitalRead(botao4) == HIGH) 
+ {
+   Serial.println();
+   Serial.println("Rechamando a senha");
+   if (ultima_senha1 > 500) 
+   {
+       Serial.println("Senha Preferencial: P " + String(ultima_senha1));
+   }
+   else if (ultima_senha1 < 500 && ultima_senha1 > 0) 
+   {
+     if (ultima_senha1 < 10) 
+     {
+       Serial.println("Senha Normal: 0" + String(ultima_senha1));
+     }
+
+     else 
+     {
+       Serial.println("Senha Normal: " + ultima_senha1);
+     }
+   }
+   delay(500);
+ }
 }
 
-//  if (digitalRead(botao4) == HIGH) {
-//    Serial.println("Rechamando a senha");
-//    if (ultima_senha1 > 200) {
-//        Serial.println("Senha Preferencial: P " + ultima_senha1);
-//    }
-//    if (ultima_senha1 < 200 && ultima_senha1 != 0) {
-//      if (ultima_senha1 < 10) {
-//        Serial.println("Senha Normal: 0" + String(ultima_senha1));
-//      }
-//      else {
-//        Serial.println("Senha Normal: " + ultima_senha);
-//      }
-//    }
-//    delay(500);
-//  }
-// }
-
+// Chama a senha preferencial
 void senha_pref()
 {
   Serial.println("Senha Preferencial: P " + String(lista_senhas_pref[senha_atual_pref]));
@@ -157,6 +159,7 @@ void senha_pref()
   senha_atual_pref++;
 }
 
+// Chama a senha normal
 void senha_normal()
 {
 
@@ -180,6 +183,7 @@ void senha_normal()
   }
 }
 
+// Essa função altera a última senha chamada para 0 na lista_mista[]
 void remove_da_lista_mista(int lista)
 {
   for (i = 0; i < num_senha; i++)
@@ -192,27 +196,60 @@ void remove_da_lista_mista(int lista)
   }
 }
 
-// Confere se existem senhas preferenciais seguidas a partir da posição atual na chamada
+// Confere se existem senhas preferenciais seguidas na ordem de chamada.
 void confere_ordem()
 {
+  // if (cont == 0)
+  // {
+  // A variável cont vai armazenar quantas senhas preferenciais em seguida foram encontradas
   cont = 0;
-  for (senha_atual_mista = i; senha_atual_mista < num_senha; senha_atual_mista++)
+  for (int x = 0; x < num_senha; x++)
   {
-    if (lista_mista[senha_atual_mista] == 0) // Se o valor encontrado for 0, pula para o próximo loop do for
+    if (lista_mista[x] == 0) // Se o valor encontrado for 0, pula para o próximo loop do for
     {
       continue;
     }
 
-    if (lista_mista[senha_atual_mista] >= 501) // Se encontrar um preferencial, cont++
+    // Se o encontrar uma senha normal, encerra a busca pois será aplicado o método de senha alternada
+    else if (lista_mista[x] < 501)
     {
-      cont++;
+      // ainda_tem_pref = false;
+      break;
     }
 
-    if (lista_mista[senha_atual_mista] < 501) // Se encontrar um normal, encerra o loop
+    // Se encontrar um preferencial, entra em um loop para verificar as próximas senhas
+    // a partir da primeira preferencial encontrada
+    if (lista_mista[x] >= 501)
     {
+      int y = x;
+      cont++;
+
+      while (lista_mista[y] >= 501)
+      {
+        y++;
+
+        // Se y chegar no limite da lista, ele vai para o começo e continua procurando preferenciais seguidos
+        if (y == num_mista)
+        {
+          y = 0;
+        }
+
+        // Se encontrar senha preferencial, cont++
+        else if (lista_mista[y] >= 501)
+        {
+          cont++;
+        }
+
+        // Se encontrar senha normal, encerra a busca
+        else if (lista_mista[y] < 501)
+        {
+          break;
+        }
+      }
       break;
     }
   }
+  // }
 }
 
 void soma()
@@ -231,21 +268,27 @@ void soma_pref()
   }
 }
 
+// Chamada de senha de forma alternada, sempre começando pela preferencial
 void misto()
 {
-  // cont != 0 quando confere_ordem() encontra mais de um preferencial seguido
-  // Enquanto cont != 0, a função misto() só permite imprimir as senhas preferenciais
-  if (cont != 0)
+  if (alterna_pref == false)
   {
     senha_pref();
+    alterna_pref = true;
   }
 
-  // se não tiver preferenciais seguidas, as senhas serão chamadas de forma alternada
-  // a alternância é definida pelo booleano tem_preferencial
   else
   {
     senha_normal();
+    alterna_pref = false;
   }
+}
+
+// Chamada de senha quando existem ambas senhas, mas as preferenciais estão seguidas
+void misto_so_pref()
+{
+  senha_pref();
+  cont--;
 }
 
 void chama_senha()
@@ -256,89 +299,38 @@ void chama_senha()
   soma_pref();
   Serial.println("== Chamando Senha ==");
 
-  if (soma_normal == 0 && soma_preferencial != 0)
+  if (soma_normal == 0 && soma_preferencial != 0) // 1° caso - Somente senhas preferenciais
   {
     senha_pref();
-    Serial.println("1° caso - senha_pref()");
+    // Serial.println("1° caso - senha_pref()");
   }
 
-  else if (soma_normal != 0 && soma_preferencial == 0)
+  else if (soma_normal != 0 && soma_preferencial == 0) // 2° caso - Somente senhas normais
   {
     senha_normal();
-    Serial.println("2° caso - senha_normal()");
+    // Serial.println("2° caso - senha_normal()");
   }
 
-  else if (soma_normal != 0 && soma_preferencial != 0)
+  else if (soma_normal != 0 && soma_preferencial != 0) // 3° caso - Ambas as senhas, com preferenciais seguidas
   {
-    soma();
-    // if (lista_mista[senha_atual_mista + 1] > 500)
-    // {
-    //   ainda_tem_pref = true;
-    // }
-    if (ainda_tem_pref == true || soma_normal == 0)
+    confere_ordem();
+
+    if (cont != 0)
     {
-      senha_pref();
-      Serial.println("3° caso - ainda_tem_pref");
-      // Serial.println(ultima_senha1);
-      // Serial.println(lista_mista[senha_atual_mista + 1]);
-
-      if (ultima_senha1 > 500 && lista_mista[senha_atual_mista + 1] > 500)
-      {
-        ainda_tem_pref = true;
-      }
-
-      else
-      {
-        ainda_tem_pref = false;
-      }
+      misto_so_pref();
+      // Serial.println("3° caso - misto_so_pref()");
     }
 
-    else
+    else // 3° caso - Ambas as senhas, sem preferenciais em seguida
     {
-      alternado();
-      //     soma_pref();
-      //     if (soma_preferencial != 0 && tem_preferencial == true)
-      //     {
-      //       senha_pref();
-      //       Serial.println("3° caso - pref alternada");
-      //       tem_preferencial = false;
-      //     }
-      //     else
-      //     {
-      //       senha_normal();
-      //       Serial.println("3° caso - normal alternada");
-      //       tem_preferencial = true;
-      //     }
-      //   }
-      // }
-
-      // else
-      // {
-      //   Serial.println("Não há mais senhas");
-      // }
+      misto();
+      // Serial.println("3° caso - misto()"); 
     }
   }
 
   else
   {
     Serial.println("Não há mais senhas");
-  }
-}
-
-void alternado()
-{
-  soma_pref();
-  if (soma_preferencial != 0 && tem_preferencial == true)
-  {
-    senha_pref();
-    Serial.println("3° caso - pref alternada");
-    tem_preferencial = false;
-  }
-  else
-  {
-    senha_normal();
-    Serial.println("3° caso - normal alternada");
-    tem_preferencial = true;
   }
 }
 
