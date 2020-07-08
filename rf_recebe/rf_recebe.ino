@@ -26,6 +26,9 @@ int lista_senhas[num_senha];       // Vetor que armazena senhas existentes
 int lista_senhas_pref[num_senha];  // Vetor que armazena senhas PREFERENCIAIS
 int lista_mista[num_mista];        // Vetor que armazena todas as senhas na ordem de chegada
 
+int senha_pref_armazenada;
+int senha_normal_armazenada;
+
 int ordem_senha = 0;      // Variável que indica as posições em que as senhas serão armazenadas no vetor "lista_senhas"
 int ordem_senha_pref = 0; // Variável que indica as posições em que as senhas PREFERENCIAIS serão armazenadas no vetor "lista_senhas_pref"
 int ordem_mista = 0;      // Variável que indica as posições em que todas as senhas serão armazenadas no vetor "lista_mista"
@@ -45,12 +48,14 @@ int ultima_senha2 = 0;
 int ultima_senha3 = 0;
 int ultima_mista = 0;
 
+int identificador = 0;
+
 int tempo = 500;
 
 void setup()
 {
   Serial.begin(9600);
-  Serial.println("setup");
+  // Serial.println("setup");
   pinMode(botao1, INPUT);
   pinMode(botao2, INPUT);
 
@@ -72,19 +77,6 @@ void loop()
   // Adiciona uma senha à fila normal
   if (mensagem == "norm")
   {
-    Serial.println();
-    Serial.println("Fila Normal");
-    Serial.println("Senha:");
-
-    if (cont_senha < 10)
-    {
-      Serial.println("0" + String(cont_senha));
-    }
-
-    else
-    {
-      Serial.println(cont_senha);
-    }
     lista_mista[ordem_mista] = cont_senha;
     lista_senhas[ordem_senha] = cont_senha;
     cont_senha++;
@@ -96,11 +88,6 @@ void loop()
   // Adiciona uma senha à fila preferencial
   else if (mensagem == "pref")
   {
-    Serial.println();
-    Serial.println("Fila Preferencial");
-    Serial.println("Senha:");
-    Serial.println(String("P ") + cont_senha_pref);
-
     lista_senhas_pref[ordem_senha_pref] = cont_senha_pref;
     lista_mista[ordem_mista] = cont_senha_pref;
     cont_senha_pref++;
@@ -112,32 +99,15 @@ void loop()
 
   if (digitalRead(botao1) == HIGH)
   {
-    Serial.println();
+    identificador = 1;
     chama_senha();
     delay(tempo);
   }
 
   if (digitalRead(botao2) == HIGH)
   {
-    Serial.println();
-    Serial.println("Rechamando a senha");
-    if (ultima_senha1 > 500)
-    {
-      Serial.println("Senha Preferencial: P " + String(ultima_senha1));
-    }
-    else if (ultima_senha1 < 500 && ultima_senha1 > 0)
-    {
-      if (ultima_senha1 < 10)
-      {
-        Serial.println("Senha Normal: 0" + String(ultima_senha1));
-      }
-
-      else
-      {
-        Serial.println("Senha Normal: " + ultima_senha1);
-      }
-    }
-
+    identificador = 2;
+    chama_senha();
     delay(tempo);
   }
 
@@ -193,11 +163,11 @@ void decoder()
   }
 }
 
-
 // Chama a senha preferencial
 void senha_pref()
 {
-  Serial.println("Senha Preferencial: P " + String(lista_senhas_pref[senha_atual_pref]));
+  senha_pref_armazenada = lista_senhas_pref[senha_atual_pref];
+  Serial.println("P " + String(senha_pref_armazenada) + "-" + String(identificador));
   ultima_senha1 = lista_senhas_pref[senha_atual_pref];
   remove_da_lista_mista(lista_senhas_pref[senha_atual_pref]);
   lista_senhas_pref[senha_atual_pref] = 0;
@@ -211,14 +181,15 @@ void senha_normal()
 
   if (soma_normal > 0)
   {
+    senha_normal_armazenada = lista_senhas[senha_atual];
     if (lista_senhas[senha_atual] < 10)
     {
-      Serial.println("Senha Normal: 0" + String(lista_senhas[senha_atual]));
+      Serial.println("0" + String(senha_normal_armazenada) + "-" + String(identificador));
     }
 
     else
     {
-      Serial.println("Senha Normal: " + String(lista_senhas[senha_atual]));
+      Serial.println(String(senha_normal_armazenada) + "-" + String(identificador));
     }
 
     ultima_senha1 = lista_senhas[senha_atual];
@@ -245,8 +216,6 @@ void remove_da_lista_mista(int lista)
 // Confere se existem senhas preferenciais seguidas na ordem de chamada.
 void confere_ordem()
 {
-  // if (cont == 0)
-  // {
   // A variável cont vai armazenar quantas senhas preferenciais em seguida foram encontradas
   cont = 0;
   for (int x = 0; x < num_senha; x++)
@@ -295,7 +264,6 @@ void confere_ordem()
       break;
     }
   }
-  // }
 }
 
 void soma()
@@ -306,9 +274,10 @@ void soma()
   }
 }
 
+// Soma as senhas preferenciais para verificar se existem mais senhas preferenciais
 void soma_pref()
 {
-  for (byte x = 0; x < num_senha; x++) // Soma as senhas preferenciais para verificar se existem mais senhas preferenciais
+  for (byte x = 0; x < num_senha; x++) 
   {
     soma_preferencial += lista_senhas_pref[x];
   }
@@ -343,40 +312,41 @@ void chama_senha()
   soma_preferencial = 0;
   soma();
   soma_pref();
-  Serial.println("== Chamando Senha ==");
-
-  if (soma_normal == 0 && soma_preferencial != 0) // 1° caso - Somente senhas preferenciais
+  // Serial.println("== Chamando Senha ==");
+  if (soma_normal || soma_preferencial != 0)
   {
-    senha_pref();
-    // Serial.println("1° caso - senha_pref()");
-  }
-
-  else if (soma_normal != 0 && soma_preferencial == 0) // 2° caso - Somente senhas normais
-  {
-    senha_normal();
-    // Serial.println("2° caso - senha_normal()");
-  }
-
-  else if (soma_normal != 0 && soma_preferencial != 0) // 3° caso - Ambas as senhas, com preferenciais seguidas
-  {
-    confere_ordem();
-
-    if (cont != 0)
+    if (soma_normal == 0 && soma_preferencial != 0) // 1° caso - Somente senhas preferenciais
     {
-      misto_so_pref();
-      // Serial.println("3° caso - misto_so_pref()");
+      senha_pref();
+      // Serial.println("1° caso - senha_pref()");
     }
 
-    else // 3° caso - Ambas as senhas, sem preferenciais em seguida
+    else if (soma_normal != 0 && soma_preferencial == 0) // 2° caso - Somente senhas normais
     {
-      misto();
-      // Serial.println("3° caso - misto()");
+      senha_normal();
+      // Serial.println("2° caso - senha_normal()");
+    }
+
+    else if (soma_normal != 0 && soma_preferencial != 0) // 3° caso - Ambas as senhas, com preferenciais seguidas
+    {
+      confere_ordem();
+
+      if (cont != 0)
+      {
+        misto_so_pref();
+        // Serial.println("3° caso - misto_so_pref()");
+      }
+
+      else // 3° caso - Ambas as senhas, sem preferenciais em seguida
+      {
+        misto();
+        // Serial.println("3° caso - misto()");
+      }
     }
   }
-
   else
   {
-    Serial.println("Não há mais senhas");
+    // Serial.println("Não há mais senhas");
   }
 }
 
