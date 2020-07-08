@@ -18,9 +18,10 @@ void setup()
 
 void loop()
 {
+  // Envia senhas normais
   if (digitalRead(botao1) == HIGH)
   {
-    const char *msg1 = "normal";
+    const char *msg1 = "norm";
 
     digitalWrite(13, true); // Pisca para mostrar que enviou dados
     vw_send((uint8_t *)msg1, strlen(msg1));
@@ -30,9 +31,10 @@ void loop()
     delay(tempo);
   }
 
+  // Envia senhas preferenciais
   if (digitalRead(botao2) == HIGH)
   {
-    const char *msg2 = "preferencial";
+    const char *msg2 = "pref";
 
     digitalWrite(13, true); // Pisca para mostrar que enviou dados
     vw_send((uint8_t *)msg2, strlen(msg2));
