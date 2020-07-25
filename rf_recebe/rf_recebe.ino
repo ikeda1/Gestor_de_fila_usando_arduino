@@ -10,9 +10,21 @@ String mensagem = "";
 /////////////////////////////////////////////////
 ///////  Variáveis para gerenciar a fila  ///////
 /////////////////////////////////////////////////
+#define NOTE_B5 988
+#define NOTE_C4 262
+#define buzzerPin 4
 
 #define botao1 3
-#define botao2 4
+#define botao2 2
+// #define botao3 4
+#define botao4 5
+#define botao5 6
+#define botao6 7
+
+unsigned long previousMillis = 0; // Marca o tempo atual
+const long interval = 500;        // Marca o intervalo que deve passar
+int estado_som;                   // Marca o estado da função som()
+bool toca_som = false;            // Ativa a função som
 
 int cont_senha = 1;        // Contador de senhas, mostra o número da senha que será impressa
 int cont_senha_pref = 501; // Contador de senhas preferenciais, mostra o número da senha preferencial que será impressa
@@ -25,6 +37,7 @@ const unsigned int num_senha = 50; // Número de senhas dentro da lista_senhas
 int lista_senhas[num_senha];       // Vetor que armazena senhas existentes
 int lista_senhas_pref[num_senha];  // Vetor que armazena senhas PREFERENCIAIS
 int lista_mista[num_mista];        // Vetor que armazena todas as senhas na ordem de chegada
+int guarda_senhas[3];              // Vetor que armazena as últimas senhas chamadas em cada balança. A ordem indica o numero da balança ("posição = num_balança" | 0 = 1 | 1 = 2 | 2 = 3)
 
 int senha_pref_armazenada;
 int senha_normal_armazenada;
@@ -40,35 +53,28 @@ int soma_normal;       // Armazena a soma das senhas normais
 
 int senha_atual = 0;       // Variável que indica a senha que está sendo chamada
 int senha_atual_pref = 0;  // Variável que indica a senha preferencial que está sendo chamada
-int senha_atual_mista = 0; //Variável que indica a senha (da lista mista) que foi chamada
+// int senha_atual_mista = 0; // Variável que indica a senha (da lista mista) que foi chamada
 
-// Cada variável pertence a um soquete, armazenando a última senha chamada em cada balança
-int ultima_senha1 = 0;
-int ultima_senha2 = 0;
-int ultima_senha3 = 0;
-int ultima_mista = 0;
+int identificador = 0; // Variável que indica qual balança foi usada (1, 2 ou 3)
 
-int identificador = 0;
-
-int tempo = 500;
+int tempo = 500; // Delay padrão usado nos botões e no alarme sonoro
 
 void setup()
 {
   Serial.begin(9600);
-  // Serial.println("setup");
   pinMode(botao1, INPUT);
   pinMode(botao2, INPUT);
+  pinMode(buzzerPin, OUTPUT);
 
   // Configuração do receptor rf
   vw_set_ptt_inverted(true);
   vw_setup(2000);
-  // vw_set_rx_pin(12);
   vw_rx_start();
 }
 
 void loop()
 {
-
+  som();
   condicoes(); // Condições para armazenar na lista de filas.
   decoder();   // Converte os dados recebidos via radio frequência para string
 
@@ -99,17 +105,49 @@ void loop()
 
   if (digitalRead(botao1) == HIGH)
   {
-    identificador = 1;
-    chama_senha();
+    // identificador = 1;
+    Serial.println("teste");
+    // chama_senha();
     delay(tempo);
   }
 
   if (digitalRead(botao2) == HIGH)
   {
+    // identificador = 1;
+    Serial.println("teste2");
+    // rechama_senha(0);
+    delay(tempo);
+  }
+
+  // if (digitalRead(botao3) == HIGH)
+  // {
+  //   identificador = 2;
+  //   chama_senha();
+  //   delay(tempo);
+  // }
+
+  if (digitalRead(botao4) == HIGH)
+  {
     identificador = 2;
+    rechama_senha(1);
+    delay(tempo);
+  }
+
+  if (digitalRead(botao5) == HIGH)
+  {
+    identificador = 3;
     chama_senha();
     delay(tempo);
   }
+
+    if (digitalRead(botao6) == HIGH)
+  {
+    identificador = 3;
+    rechama_senha(2);
+    delay(tempo);
+  }
+// ---------------------------------------------------------------------------------------------------------------------- //
+  // ---------  Botao feito para ajudar no debug, mostra o valor armazenado nas três listas e a variável cont --------- //
 
   // if (digitalRead(botao4) == HIGH)
   // {
@@ -141,6 +179,7 @@ void loop()
 
   //   delay(500);
   // }
+// ---------------------------------------------------------------------------------------------------------------------- //
 }
 
 // Decodifica a mensagem recebida pelo módulo rf
@@ -163,15 +202,19 @@ void decoder()
   }
 }
 
+// Em ambas as funções senha_normal() e senha_pref(), após enviar a senha pelo Serial, a senha é armazenada pelo guarda_senha(), removida da lista de ordem de chegada
+// apagada da lista de senhas preferenciais
+
 // Chama a senha preferencial
 void senha_pref()
 {
   senha_pref_armazenada = lista_senhas_pref[senha_atual_pref];
   Serial.println("P " + String(senha_pref_armazenada) + "-" + String(identificador));
-  ultima_senha1 = lista_senhas_pref[senha_atual_pref];
+
+  guarda_senha(lista_senhas_pref[senha_atual_pref]);
   remove_da_lista_mista(lista_senhas_pref[senha_atual_pref]);
   lista_senhas_pref[senha_atual_pref] = 0;
-  senha_atual_mista = i;
+  // senha_atual_mista = i; 
   senha_atual_pref++;
 }
 
@@ -192,10 +235,10 @@ void senha_normal()
       Serial.println(String(senha_normal_armazenada) + "-" + String(identificador));
     }
 
-    ultima_senha1 = lista_senhas[senha_atual];
+    guarda_senha(lista_senhas[senha_atual]);
     remove_da_lista_mista(lista_senhas[senha_atual]);
     lista_senhas[senha_atual] = 0;
-    senha_atual_mista = i;
+    // senha_atual_mista = i;
     senha_atual++;
   }
 }
@@ -277,7 +320,7 @@ void soma()
 // Soma as senhas preferenciais para verificar se existem mais senhas preferenciais
 void soma_pref()
 {
-  for (byte x = 0; x < num_senha; x++) 
+  for (byte x = 0; x < num_senha; x++)
   {
     soma_preferencial += lista_senhas_pref[x];
   }
@@ -343,6 +386,7 @@ void chama_senha()
         // Serial.println("3° caso - misto()");
       }
     }
+    toca_som = true;
   }
   else
   {
@@ -389,8 +433,77 @@ void condicoes()
     senha_atual_pref = 0;
   }
 
-  if (senha_atual_mista == num_mista)
+  // if (senha_atual_mista == num_mista)
+  // {
+  //   senha_atual_mista = 0;
+  // }
+}
+
+void som()
+{
+  unsigned long currentMillis = millis();
+  if (currentMillis - previousMillis >= interval)
   {
-    senha_atual_mista = 0;
+    previousMillis = currentMillis;
+    if (estado_som == 0 && toca_som == true)
+    {
+      tone(buzzerPin, NOTE_B5);
+      estado_som = 1;
+    }
+
+    else if (estado_som == 1)
+    {
+      tone(buzzerPin, NOTE_C4);
+      estado_som = 2;
+    }
+
+    else if (estado_som == 2)
+    {
+      noTone(buzzerPin);
+      estado_som = 0;
+      toca_som = false;
+    }
+  }
+}
+
+void guarda_senha(int senha)
+{
+  switch (identificador)
+  {
+  case 1:
+    guarda_senhas[0] = senha;
+    break;
+
+  case 2:
+    guarda_senhas[1] = senha;
+    break;
+
+  case 3:
+    guarda_senhas[2] = senha;
+    break;
+
+  default:
+    break;
+  }
+}
+
+void rechama_senha(int i)
+{
+  int x = guarda_senhas[i];
+  toca_som = true;
+  
+  if (x < 10 && x > 0)
+  {
+    Serial.println("0" + String(x) + "-" + String(identificador));
+  }
+
+  else if (x > 9 && x < 501)
+  {
+    Serial.println(String(x) + "-" + String(identificador));
+  }
+
+  else if (x > 500 && x < 1000)
+  {
+    Serial.println("P " + String(x) + "-" + String(identificador));
   }
 }
