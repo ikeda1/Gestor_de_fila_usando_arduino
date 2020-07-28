@@ -1,30 +1,24 @@
-#include <VirtualWire.h>
+#include <SPI.h> // Inclusão de biblioteca
+#include <nRF24L01.h> // Inclusão de biblioteca
+#include <RF24.h> // Inclusão de biblioteca
 
 /////////////////////////////////////////////////
-//  Variáveis para a biblioteca VirtualWire  ////
+//////  Variáveis para a biblioteca RF24  ///////
 /////////////////////////////////////////////////
 
-char codigo;
-String mensagem = "";
+RF24 radio(0, 10); // Cria uma instância utilizando os pinos (CE, CSN)
+const byte address[6] = "00002"; // Cria um endereço para envio de dados
 
 /////////////////////////////////////////////////
 ///////  Variáveis para gerenciar a fila  ///////
 /////////////////////////////////////////////////
-#define NOTE_B5 988
-#define NOTE_C4 262
-#define buzzerPin 4
 
 #define botao1 3
 #define botao2 2
-// #define botao3 4
+#define botao3 4
 #define botao4 5
 #define botao5 6
 #define botao6 7
-
-unsigned long previousMillis = 0; // Marca o tempo atual
-const long interval = 500;        // Marca o intervalo que deve passar
-int estado_som;                   // Marca o estado da função som()
-bool toca_som = false;            // Ativa a função som
 
 int cont_senha = 1;        // Contador de senhas, mostra o número da senha que será impressa
 int cont_senha_pref = 501; // Contador de senhas preferenciais, mostra o número da senha preferencial que será impressa
@@ -53,7 +47,6 @@ int soma_normal;       // Armazena a soma das senhas normais
 
 int senha_atual = 0;       // Variável que indica a senha que está sendo chamada
 int senha_atual_pref = 0;  // Variável que indica a senha preferencial que está sendo chamada
-// int senha_atual_mista = 0; // Variável que indica a senha (da lista mista) que foi chamada
 
 int identificador = 0; // Variável que indica qual balança foi usada (1, 2 ou 3)
 
@@ -67,64 +60,37 @@ void setup()
   pinMode(buzzerPin, OUTPUT);
 
   // Configuração do receptor rf
-  vw_set_ptt_inverted(true);
-  vw_setup(2000);
-  vw_rx_start();
+  radio.begin(); // Inicializa a comunicação sem fio
+  radio.openReadingPipe(0, address); // Define o endereço para recebimento de dados
+  radio.setPALevel(RF24_PA_HIGH); // Define o nível do amplificador de potência
+  radio.startListening(); // Define o módulo como receptor (Não envia dados)
 }
 
 void loop()
 {
-  som();
   condicoes(); // Condições para armazenar na lista de filas.
-  decoder();   // Converte os dados recebidos via radio frequência para string
-
-  ///////////// Mensagens recebidas pelo emissor rf ////////
-
-  // Adiciona uma senha à fila normal
-  if (mensagem == "norm")
-  {
-    lista_mista[ordem_mista] = cont_senha;
-    lista_senhas[ordem_senha] = cont_senha;
-    cont_senha++;
-    ordem_senha++;
-    ordem_mista++;
-    mensagem = "";
-  }
-
-  // Adiciona uma senha à fila preferencial
-  else if (mensagem == "pref")
-  {
-    lista_senhas_pref[ordem_senha_pref] = cont_senha_pref;
-    lista_mista[ordem_mista] = cont_senha_pref;
-    cont_senha_pref++;
-    ordem_senha_pref++;
-    ordem_mista++;
-    mensagem = "";
-  }
-  //////////////////////////////////////////////////////////
+  recebe_senha();   // Converte os dados recebidos via radio frequência para string
 
   if (digitalRead(botao1) == HIGH)
   {
-    // identificador = 1;
-    Serial.println("teste");
-    // chama_senha();
+    identificador = 1;
+    chama_senha();
     delay(tempo);
   }
 
   if (digitalRead(botao2) == HIGH)
   {
-    // identificador = 1;
-    Serial.println("teste2");
-    // rechama_senha(0);
+    identificador = 1;
+    rechama_senha(0);
     delay(tempo);
   }
 
-  // if (digitalRead(botao3) == HIGH)
-  // {
-  //   identificador = 2;
-  //   chama_senha();
-  //   delay(tempo);
-  // }
+  if (digitalRead(botao3) == HIGH)
+  {
+    identificador = 2;
+    chama_senha();
+    delay(tempo);
+  }
 
   if (digitalRead(botao4) == HIGH)
   {
@@ -182,28 +148,37 @@ void loop()
 // ---------------------------------------------------------------------------------------------------------------------- //
 }
 
-// Decodifica a mensagem recebida pelo módulo rf
-void decoder()
+// Recebe a mensagem pelo módulo RF24L01
+void recebe_senha()
 {
-  uint8_t buf[VW_MAX_MESSAGE_LEN];
-  uint8_t buflen = VW_MAX_MESSAGE_LEN;
-  if (vw_get_message(buf, &buflen))
-  {
-    digitalWrite(13, true); // Pisca para indicar que recebeu uma mensagem
-    //    Serial.print("Recebeu: ");
-    for (int i = 0; i < buflen; i++)
+  if (radio.available()) { // Se a comunicação estiver habilitada, faz...
+    int num; // Armazena os dados recebidos
+    radio.read(&num, sizeof(int)); // Lê os dados recebidos
+
+    // Adiciona uma senha à fila normal
+    if (num == 1) 
     {
-      //      Serial.print(buf[i], HEX);
-      //      Serial.print(" ");
-      codigo = char(buf[i]);
-      mensagem.concat(codigo);
+      lista_mista[ordem_mista] = cont_senha;
+      lista_senhas[ordem_senha] = cont_senha;
+      cont_senha++;
+      ordem_senha++;
+      ordem_mista++;
     }
-    digitalWrite(13, false);
+
+    // Adiciona uma senha à fila preferencial
+    else if (num == 2)
+    {
+      lista_senhas_pref[ordem_senha_pref] = cont_senha_pref;
+      lista_mista[ordem_mista] = cont_senha_pref;
+      cont_senha_pref++;
+      ordem_senha_pref++;
+      ordem_mista++;
+    }
   }
 }
 
 // Em ambas as funções senha_normal() e senha_pref(), após enviar a senha pelo Serial, a senha é armazenada pelo guarda_senha(), removida da lista de ordem de chegada
-// apagada da lista de senhas preferenciais
+// e de senhas preferenciais
 
 // Chama a senha preferencial
 void senha_pref()
@@ -214,7 +189,6 @@ void senha_pref()
   guarda_senha(lista_senhas_pref[senha_atual_pref]);
   remove_da_lista_mista(lista_senhas_pref[senha_atual_pref]);
   lista_senhas_pref[senha_atual_pref] = 0;
-  // senha_atual_mista = i; 
   senha_atual_pref++;
 }
 
@@ -238,7 +212,6 @@ void senha_normal()
     guarda_senha(lista_senhas[senha_atual]);
     remove_da_lista_mista(lista_senhas[senha_atual]);
     lista_senhas[senha_atual] = 0;
-    // senha_atual_mista = i;
     senha_atual++;
   }
 }
@@ -271,7 +244,6 @@ void confere_ordem()
     // Se o encontrar uma senha normal, encerra a busca pois será aplicado o método de senha alternada
     else if (lista_mista[x] < 501)
     {
-      // ainda_tem_pref = false;
       break;
     }
 
@@ -431,38 +403,6 @@ void condicoes()
   if (senha_atual_pref == num_senha)
   {
     senha_atual_pref = 0;
-  }
-
-  // if (senha_atual_mista == num_mista)
-  // {
-  //   senha_atual_mista = 0;
-  // }
-}
-
-void som()
-{
-  unsigned long currentMillis = millis();
-  if (currentMillis - previousMillis >= interval)
-  {
-    previousMillis = currentMillis;
-    if (estado_som == 0 && toca_som == true)
-    {
-      tone(buzzerPin, NOTE_B5);
-      estado_som = 1;
-    }
-
-    else if (estado_som == 1)
-    {
-      tone(buzzerPin, NOTE_C4);
-      estado_som = 2;
-    }
-
-    else if (estado_som == 2)
-    {
-      noTone(buzzerPin);
-      estado_som = 0;
-      toca_som = false;
-    }
   }
 }
 
