@@ -13,8 +13,8 @@ const byte address[6] = "00002"; // Cria um endereço para envio de dados
 ///////  Variáveis para gerenciar a fila  ///////
 /////////////////////////////////////////////////
 
-#define botao1 3
-#define botao2 2
+#define botao1 2
+#define botao2 3
 #define botao3 4
 #define botao4 5
 #define botao5 6
@@ -57,7 +57,10 @@ void setup()
   Serial.begin(9600);
   pinMode(botao1, INPUT);
   pinMode(botao2, INPUT);
-  pinMode(buzzerPin, OUTPUT);
+  pinMode(botao3, INPUT);
+  pinMode(botao4, INPUT);
+  pinMode(botao5, INPUT);
+  pinMode(botao6, INPUT);
 
   // Configuração do receptor rf
   radio.begin(); // Inicializa a comunicação sem fio
@@ -358,7 +361,6 @@ void chama_senha()
         // Serial.println("3° caso - misto()");
       }
     }
-    toca_som = true;
   }
   else
   {
@@ -430,7 +432,6 @@ void guarda_senha(int senha)
 void rechama_senha(int i)
 {
   int x = guarda_senhas[i];
-  toca_som = true;
   
   if (x < 10 && x > 0)
   {
