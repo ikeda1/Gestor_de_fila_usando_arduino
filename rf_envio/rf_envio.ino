@@ -93,7 +93,6 @@ void loop()
       cont_senha_pref = 501;
     }
 
-    senhaPref = 2; // Variável que recebe a mensagem a ser transmitida
     radio.write(&senhaPref, sizeof(int)); // Envia a mensagem ao receptor
 
     // digitalWrite(13, true); // Pisca o led built-in para mostrar que enviou dados
