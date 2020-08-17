@@ -18,7 +18,7 @@ const byte address[6] = "00002"; // Cria um endereço para envio de dados
 #define botao3 4
 #define botao4 5
 #define botao5 6
-#define botao6 7
+// #define botao6 7
 
 int cont_senha = 1;        // Contador de senhas, mostra o número da senha que será impressa
 int cont_senha_pref = 501; // Contador de senhas preferenciais, mostra o número da senha preferencial que será impressa
@@ -50,7 +50,7 @@ int senha_atual_pref = 0;  // Variável que indica a senha preferencial que est�
 
 int identificador = 0; // Variável que indica qual balança foi usada (1, 2 ou 3)
 
-int tempo = 500; // Delay padrão usado nos botões e no alarme sonoro
+int tempo = 500; // Delay padrão usado nos botões
 
 void setup()
 {
@@ -60,7 +60,7 @@ void setup()
   pinMode(botao3, INPUT);
   pinMode(botao4, INPUT);
   pinMode(botao5, INPUT);
-  pinMode(botao6, INPUT);
+  // pinMode(botao6, INPUT);
 
   // Configuração do receptor rf
   radio.begin(); // Inicializa a comunicação sem fio
@@ -73,7 +73,6 @@ void loop()
 {
   condicoes(); // Condições para armazenar na lista de filas.
   recebe_senha();   // Converte os dados recebidos via radio frequência para string
-
   if (digitalRead(botao1) == HIGH)
   {
     identificador = 1;
@@ -104,17 +103,18 @@ void loop()
 
   if (digitalRead(botao5) == HIGH)
   {
-    identificador = 3;
-    chama_senha();
+    Serial.println("botao5");
+    cont_senha = 1;
+    cont_senha_pref = 501;
     delay(tempo);
   }
 
-    if (digitalRead(botao6) == HIGH)
-  {
-    identificador = 3;
-    rechama_senha(2);
-    delay(tempo);
-  }
+//    if (digitalRead(botao6) == HIGH)
+//  {
+//    identificador = 3;
+//    rechama_senha(2);
+//    delay(tempo);
+//  }
 // ---------------------------------------------------------------------------------------------------------------------- //
   // ---------  Botao feito para ajudar no debug, mostra o valor armazenado nas três listas e a variável cont --------- //
 
@@ -371,7 +371,7 @@ void chama_senha()
 void condicoes()
 {
   // Define o número máximo das senhas | normal = 1 ~ 500 | preferencial = 501 ~ 999
-  if (cont_senha == 501)
+  if (cont_senha == 500)
   {
     cont_senha = 1;
   }
