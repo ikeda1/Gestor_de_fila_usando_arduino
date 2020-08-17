@@ -2,8 +2,8 @@
 #include <nRF24L01.h> // Inclusão de biblioteca
 #include <RF24.h> // Inclusão de biblioteca
 
-#define botao1 6
-#define botao2 7
+#define botao1 5
+#define botao2 6
 
 RF24 radio(9, 10); // Cria uma instância utilizando os pinos (CE, CSN)
 const byte address[6] = "00002"; //CRIA UM ENDEREÇO PARA ENVIO DOS
