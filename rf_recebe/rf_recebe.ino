@@ -8,6 +8,8 @@
 
 RF24 radio(0, 10); // Cria uma instância utilizando os pinos (CE, CSN)
 const byte address[6] = "00002"; // Cria um endereço para envio de dados
+//int num_recebido;
+int num_pref;
 
 /////////////////////////////////////////////////
 ///////  Variáveis para gerenciar a fila  ///////
@@ -20,13 +22,10 @@ const byte address[6] = "00002"; // Cria um endereço para envio de dados
 #define botao5 6
 // #define botao6 7
 
-int cont_senha = 1;        // Contador de senhas, mostra o número da senha que será impressa
-int cont_senha_pref = 501; // Contador de senhas preferenciais, mostra o número da senha preferencial que será impressa
-
 int cont = 0; // Contador da função confere_ordem, marca o número de senhas preferenciais seguidas
 int i;        // Contador da função remove_da_lista_mista
 
-const unsigned int num_mista = 50; // Número de senhas dentro da lista_mista
+const unsigned int num_mista = 100; // Número de senhas dentro da lista_mista
 const unsigned int num_senha = 50; // Número de senhas dentro da lista_senhas
 int lista_senhas[num_senha];       // Vetor que armazena senhas existentes
 int lista_senhas_pref[num_senha];  // Vetor que armazena senhas PREFERENCIAIS
@@ -50,7 +49,12 @@ int senha_atual_pref = 0;  // Variável que indica a senha preferencial que est�
 
 int identificador = 0; // Variável que indica qual balança foi usada (1, 2 ou 3)
 
-int tempo = 500; // Delay padrão usado nos botões
+unsigned long previousMillis_botao1 = 0;
+unsigned long previousMillis_botao2 = 0;
+unsigned long previousMillis_botao3 = 0;
+unsigned long previousMillis_botao4 = 0;
+
+int intervalo = 500; // Delay padrão usado nos botões
 
 void setup()
 {
@@ -59,7 +63,7 @@ void setup()
   pinMode(botao2, INPUT);
   pinMode(botao3, INPUT);
   pinMode(botao4, INPUT);
-  pinMode(botao5, INPUT);
+  // pinMode(botao5, INPUT);
   // pinMode(botao6, INPUT);
 
   // Configuração do receptor rf
@@ -72,42 +76,56 @@ void setup()
 void loop()
 {
   condicoes(); // Condições para armazenar na lista de filas.
-  recebe_senha();   // Converte os dados recebidos via radio frequência para string
+  recebe_senha();   // Converte os dados recebidos via nRF24L01 para string
   if (digitalRead(botao1) == HIGH)
   {
-    identificador = 1;
-    chama_senha();
-    delay(tempo);
+    unsigned long currentMillis_botao1 = millis();
+    if ((unsigned long)(currentMillis_botao1 - previousMillis_botao1) >= intervalo)
+    {
+      previousMillis_botao1 = millis();
+      identificador = 1;
+      chama_senha();
+    }
   }
 
   if (digitalRead(botao2) == HIGH)
   {
-    identificador = 1;
-    rechama_senha(0);
-    delay(tempo);
+    unsigned long currentMillis_botao2 = millis();
+    if ((unsigned long)(currentMillis_botao2 - previousMillis_botao2) >= intervalo)
+    {
+      previousMillis_botao2 = millis();
+      identificador = 1;
+      rechama_senha(0);
+    }
   }
 
   if (digitalRead(botao3) == HIGH)
   {
-    identificador = 2;
-    chama_senha();
-    delay(tempo);
+    unsigned long currentMillis_botao3 = millis();
+    if ((unsigned long)(currentMillis_botao3 - previousMillis_botao3) >= intervalo)
+    {
+      previousMillis_botao3 = millis();
+      identificador = 2;
+      chama_senha();      
+    }
   }
 
   if (digitalRead(botao4) == HIGH)
   {
-    identificador = 2;
-    rechama_senha(1);
-    delay(tempo);
+    unsigned long currentMillis_botao4 = millis();
+    if ((unsigned long)(currentMillis_botao4 - previousMillis_botao4) >= intervalo)
+    {
+      previousMillis_botao4 = millis();
+      identificador = 2;
+      rechama_senha(1);
+    }
   }
 
-  if (digitalRead(botao5) == HIGH)
-  {
-    Serial.println("botao5");
-    cont_senha = 1;
-    cont_senha_pref = 501;
-    delay(tempo);
-  }
+  // if (digitalRead(botao5) == HIGH)
+  // {
+  //   Serial.println("botao5");
+  //   delay(tempo);
+  // }
 
 //    if (digitalRead(botao6) == HIGH)
 //  {
@@ -155,25 +173,23 @@ void loop()
 void recebe_senha()
 {
   if (radio.available()) { // Se a comunicação estiver habilitada, faz...
-    int num; // Armazena os dados recebidos
-    radio.read(&num, sizeof(int)); // Lê os dados recebidos
-
+    int num_recebido; // Armazena os dados recebidos
+    radio.read(&num_recebido, sizeof(num_recebido)); // Lê os dados recebidos
+//    Serial.println(num_recebido);
     // Adiciona uma senha à fila normal
-    if (num == 1) 
+    if (num_recebido >= 1 && num_recebido <= 500) 
     {
-      lista_mista[ordem_mista] = cont_senha;
-      lista_senhas[ordem_senha] = cont_senha;
-      cont_senha++;
+      lista_mista[ordem_mista] = num_recebido;
+      lista_senhas[ordem_senha] = num_recebido;
       ordem_senha++;
       ordem_mista++;
     }
 
     // Adiciona uma senha à fila preferencial
-    else if (num == 2)
+    else if (num_recebido >= 501 && num_recebido <= 1000)
     {
-      lista_senhas_pref[ordem_senha_pref] = cont_senha_pref;
-      lista_mista[ordem_mista] = cont_senha_pref;
-      cont_senha_pref++;
+      lista_senhas_pref[ordem_senha_pref] = num_recebido;
+      lista_mista[ordem_mista] = num_recebido;
       ordem_senha_pref++;
       ordem_mista++;
     }
@@ -370,16 +386,6 @@ void chama_senha()
 
 void condicoes()
 {
-  // Define o número máximo das senhas | normal = 1 ~ 500 | preferencial = 501 ~ 999
-  if (cont_senha == 500)
-  {
-    cont_senha = 1;
-  }
-  if (cont_senha_pref == 1000)
-  {
-    cont_senha_pref = 501;
-  }
-
   // Se a lista ficar cheia, reseta para a posição inicial para sobreescrever senhas antigas em suas respectivas listas
   if (ordem_senha == num_senha)
   {
