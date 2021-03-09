@@ -6,8 +6,8 @@
 //////  Variáveis para a biblioteca RF24  ///////
 /////////////////////////////////////////////////
 
-RF24 radio(0, 10); // Cria uma instância utilizando os pinos (CE, CSN)
-const byte address[6] = "00002"; // Cria um endereço para envio de dados
+RF24 radio(9, 10); // Cria uma instância utilizando os pinos (CE, CSN)
+const byte address[6] = "00046"; // Cria um endereço para envio de dados
 //int num_recebido;
 int num_pref;
 
@@ -20,7 +20,8 @@ int num_pref;
 #define botao3 4
 #define botao4 5
 #define botao5 6
-// #define botao6 7
+#define botao6 7
+#define led 8
 
 int cont = 0; // Contador da função confere_ordem, marca o número de senhas preferenciais seguidas
 int i;        // Contador da função remove_da_lista_mista
@@ -53,8 +54,17 @@ unsigned long previousMillis_botao1 = 0;
 unsigned long previousMillis_botao2 = 0;
 unsigned long previousMillis_botao3 = 0;
 unsigned long previousMillis_botao4 = 0;
+unsigned long previousMillis_botao5 = 0;
+unsigned long previousMillis_botao6 = 0;
 
-int intervalo = 500; // Delay padrão usado nos botões
+int lastBtnState1 == HIGH;
+int lastBtnState2 == HIGH;
+int lastBtnState3 == HIGH;
+int lastBtnState4 == HIGH;
+int lastBtnState5 == HIGH;
+int lastBtnState6 == HIGH;
+
+int intervalo = 1250; // Delay padrão usado nos botões
 
 void setup()
 {
@@ -63,21 +73,33 @@ void setup()
   pinMode(botao2, INPUT);
   pinMode(botao3, INPUT);
   pinMode(botao4, INPUT);
-  // pinMode(botao5, INPUT);
-  // pinMode(botao6, INPUT);
+//  pinMode(botao5, INPUT);
+//  pinMode(botao6, INPUT);
+//  pinMode(led, OUTPUT);
+
+//  Serial.println("setup");
 
   // Configuração do receptor rf
   radio.begin(); // Inicializa a comunicação sem fio
   radio.openReadingPipe(0, address); // Define o endereço para recebimento de dados
-  radio.setPALevel(RF24_PA_HIGH); // Define o nível do amplificador de potência
+  radio.setPALevel(RF24_PA_LOW); // Define o nível do amplificador de potência
+  radio.setDataRate(RF24_250KBPS);
   radio.startListening(); // Define o módulo como receptor (Não envia dados)
 }
 
 void loop()
 {
+  int reading_1 = digitalRead(botao1);
+  int reading_2 = digitalRead(botao2);
+  int reading_3 = digitalRead(botao3);
+  int reading_4 = digitalRead(botao4);
+//  int reading_5 = digitalRead(botao5);
+//  int reading_6 = digitalRead(botao6);
+  digitalWrite(led, LOW);
   condicoes(); // Condições para armazenar na lista de filas.
   recebe_senha();   // Converte os dados recebidos via nRF24L01 para string
-  if (digitalRead(botao1) == HIGH)
+  
+  if (reading_1 == LOW && lastBtnState1 == HIGH)
   {
     unsigned long currentMillis_botao1 = millis();
     if ((unsigned long)(currentMillis_botao1 - previousMillis_botao1) >= intervalo)
@@ -85,10 +107,11 @@ void loop()
       previousMillis_botao1 = millis();
       identificador = 1;
       chama_senha();
+//      digitalWrite(led, HIGH);
     }
   }
 
-  if (digitalRead(botao2) == HIGH)
+  if (reading_2 == LOW && lastBtnState2 == HIGH)
   {
     unsigned long currentMillis_botao2 = millis();
     if ((unsigned long)(currentMillis_botao2 - previousMillis_botao2) >= intervalo)
@@ -96,21 +119,23 @@ void loop()
       previousMillis_botao2 = millis();
       identificador = 1;
       rechama_senha(0);
+//      digitalWrite(led, HIGH);
     }
   }
 
-  if (digitalRead(botao3) == HIGH)
+  if (reading_3 == LOW && lastBtnState3 == HIGH)
   {
     unsigned long currentMillis_botao3 = millis();
     if ((unsigned long)(currentMillis_botao3 - previousMillis_botao3) >= intervalo)
     {
       previousMillis_botao3 = millis();
       identificador = 2;
-      chama_senha();      
+      chama_senha();    
+//      digitalWrite(led, HIGH);  
     }
   }
 
-  if (digitalRead(botao4) == HIGH)
+  if (reading_4 == LOW && lastBtnState4 == HIGH)
   {
     unsigned long currentMillis_botao4 = millis();
     if ((unsigned long)(currentMillis_botao4 - previousMillis_botao4) >= intervalo)
@@ -118,23 +143,44 @@ void loop()
       previousMillis_botao4 = millis();
       identificador = 2;
       rechama_senha(1);
+//      digitalWrite(led, HIGH);
     }
   }
 
-  // if (digitalRead(botao5) == HIGH)
-  // {
-  //   Serial.println("botao5");
-  //   delay(tempo);
-  // }
-
-//    if (digitalRead(botao6) == HIGH)
+//  if (reading_5 == LOW && lastBtnState5 == HIGH)
 //  {
-//    identificador = 3;
-//    rechama_senha(2);
-//    delay(tempo);
+//    unsigned long currentMillis_botao5 = millis();
+//    if ((unsigned long)(currentMillis_botao5 - previousMillis_botao5) >= intervalo)
+//    {
+//      previousMillis_botao5 = millis();
+//      identificador = 3;
+//      chama_senha();
+//      digitalWrite(led, HIGH);
+//    }
 //  }
+//
+//   if (reading_6 == LOW && lastBtnState6 == HIGH)
+//  {
+//    unsigned long currentMillis_botao6 = millis();
+//    if ((unsigned long)(currentMillis_botao6 - previousMillis_botao6) >= intervalo)
+//    {
+//      previousMillis_botao6 = millis();
+//      identificador = 3;
+//      rechama_senha(2);
+//      digitalWrite(led, HIGH);
+//    }
+//  }
+
+  lastBtnState1 = reading_1;
+  lastBtnState2 = reading_2;
+  lastBtnState3 = reading_3;
+  lastBtnState4 = reading_4;
+//  lastBtnState5 = reading_5;
+//  lastBtnState6 = reading_6;
+
 // ---------------------------------------------------------------------------------------------------------------------- //
   // ---------  Botao feito para ajudar no debug, mostra o valor armazenado nas três listas e a variável cont --------- //
+  // ---------  Utiliza o botao4 como input                                                                   --------- //
 
   // if (digitalRead(botao4) == HIGH)
   // {
@@ -166,6 +212,7 @@ void loop()
 
   //   delay(500);
   // }
+  
 // ---------------------------------------------------------------------------------------------------------------------- //
 }
 
@@ -176,6 +223,8 @@ void recebe_senha()
     int num_recebido; // Armazena os dados recebidos
     radio.read(&num_recebido, sizeof(num_recebido)); // Lê os dados recebidos
 //    Serial.println(num_recebido);
+    digitalWrite(13, true);
+    digitalWrite(13, false);
     // Adiciona uma senha à fila normal
     if (num_recebido >= 1 && num_recebido <= 500) 
     {
